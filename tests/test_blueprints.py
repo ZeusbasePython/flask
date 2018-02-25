@@ -5,7 +5,7 @@
 
     Blueprints (and currently modules)
 
-    :copyright: (c) 2015 by Armin Ronacher.
+    :copyright: © 2010 by the Pallets team.
     :license: BSD, see LICENSE for more details.
 """
 
@@ -114,7 +114,20 @@ def test_blueprint_app_error_handling(app, client):
     assert client.get('/nope').data == b'you shall not pass'
 
 
-def test_blueprint_url_definitions(app, client):
+def test_blueprint_prefix_slash(app, client):
+    bp = flask.Blueprint('test', __name__, url_prefix='/bar/')
+
+    @bp.route('/foo')
+    def foo():
+        return '', 204
+
+    app.register_blueprint(bp)
+    app.register_blueprint(bp, url_prefix='/spam/')
+    assert client.get('/bar/foo').status_code == 204
+    assert client.get('/spam/foo').status_code == 204
+
+
+def test_blueprint_url_defaults(app, client):
     bp = flask.Blueprint('test', __name__)
 
     @bp.route('/foo', defaults={'baz': 42})
@@ -358,6 +371,15 @@ def test_route_decorator_custom_endpoint_with_dots(app, client):
         AssertionError,
         bp.route('/bar/123', endpoint='bar.123'),
         lambda: None
+    )
+
+    foo_foo_foo.__name__ = 'bar.123'
+
+    pytest.raises(
+        AssertionError,
+        lambda: bp.add_url_rule(
+            '/bar/123', view_func=foo_foo_foo
+        )
     )
 
     app.register_blueprint(bp, url_prefix='/py')
